@@ -16,17 +16,30 @@ export const loginService = async (userData) => {
   if (!isMatch) {
     throw new Error("Wrong Password");
   }
-  const userObj=user.toObject();
-  const token=jsonwebtoken.sign(
-    {_id:userObj._id, fullName:userObj.fullName},
+
+  const userObj = user.toObject();
+
+  const accessToken = jsonwebtoken.sign(
+    { _id: userObj._id, fullName: userObj.fullName },
     process.env.ACCESS_TOKEN_SECRET_KEY,
-    { expiresIn: '7d' }
+    { expiresIn: process.env.TOKEN_EXPIRY || "7d" }
   );
 
-  delete userObj.password;
-  return {
-    userObj,
-    token
-  };
+  const refreshToken = jsonwebtoken.sign(
+    { _id: userObj._id },
+    process.env.REFRESH_TOKEN_SECRET_KEY,
+    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "30d" }
+  );
 
+  // Persist refresh token in DB for revocation support
+  await User.findByIdAndUpdate(userObj._id, { refreshToken });
+
+  delete userObj.password;
+  delete userObj.refreshToken;
+
+  return {
+    user: userObj,
+    accessToken,
+    refreshToken,
+  };
 };

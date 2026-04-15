@@ -5,6 +5,7 @@ import routes from "./Routes/route.js"
 import { dbConnect } from "./config/db.js"
 import cors from "cors"
 import mongoSanitize from 'express-mongo-sanitize'
+import helmet from "helmet"
 import { errorHandler } from "./middlewares/errorHandler.js"
 dotenv.config()
 
@@ -16,6 +17,7 @@ app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
+app.use(helmet());
 
 // Data sanitization middleware
 app.use(mongoSanitize());

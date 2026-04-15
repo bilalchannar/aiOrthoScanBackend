@@ -1,38 +1,58 @@
+import PatientRecord from "../../Models/patientRecord.js";
 
-export const uploadPatientData= async (req,res,next)=>{
-    console.log(req.body);
-    console.log(req.file);
+export const uploadPatientData = async (req, res, next) => {
     try {
-      const file = req.file;
-      
-      if (!file) {
-        return res.status(400).json({
-          success: false,
-          message: 'No image file provided'
-        });
-      }
+        const file = req.file;
 
-      const details = req.body.relevantData;
-
-      console.log(file);         // file metadata
-      console.log(file.buffer);  // actual image data (important)
-      console.log(details);
-
-      res.status(200).json({
-        success: true,
-        message: "Image received in memory",
-        data: {
-          originalName: file.originalname,
-          size: file.size,
-          mimeType: file.mimetype,
-          relevantData: details ? JSON.parse(details) : null
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: "No image file provided"
+            });
         }
-      });
+
+        // Parse optional relevant data
+        let medicalDetails = null;
+        if (req.body.relevantData) {
+            try {
+                const parsed = JSON.parse(req.body.relevantData);
+                medicalDetails = JSON.stringify(parsed);
+            } catch {
+                return res.status(400).json({
+                    success: false,
+                    message: "relevantData must be valid JSON"
+                });
+            }
+        }
+
+        // Store image as base64 string in imageUrl field
+        // (In production you would upload to cloud storage and save the URL)
+        const imageBase64 = file.buffer.toString("base64");
+        const imageDataUrl = `data:${file.mimetype};base64,${imageBase64}`;
+
+        const record = await PatientRecord.create({
+            patientId: req.user._id,
+            scanType: req.body.scanType || "Other",
+            scanDate: req.body.scanDate ? new Date(req.body.scanDate) : new Date(),
+            imageUrl: imageDataUrl,
+            medicalDetails: medicalDetails || req.body.medicalDetails || ""
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Patient scan uploaded and saved successfully",
+            data: {
+                recordId: record._id,
+                originalName: file.originalname,
+                size: file.size,
+                mimeType: file.mimetype,
+                scanType: record.scanType,
+                scanDate: record.scanDate,
+                medicalDetails: record.medicalDetails
+            }
+        });
 
     } catch (error) {
-      res.status(500).json({ 
-        success: false,
-        message: error.message 
-      });
+        next(error);
     }
-}
+};

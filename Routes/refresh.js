@@ -1,4 +1,8 @@
-// import express from "express"
+import express from "express";
+import { handleRefresh } from "../Controllers/auth/refresh.controller.js";
 
-// const app=express();
-// app.post("/refresh",set)
+const router = express.Router();
+
+router.post("/refresh", handleRefresh);
+
+export default router;
